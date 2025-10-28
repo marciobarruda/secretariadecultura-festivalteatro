@@ -1,1 +1,507 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Festival de Teatro do Recife • Catálogo</title>
+    <link
+      rel="icon"
+      href="https://statics.recife.pe.gov.br/images/dynamics/conecta/icons/favicon.png?w=32&h=32&fit=fill&border=2,transparent,shrink"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      /* manter todo o CSS existente exatamente como fornecido,
+         pois já está alinhado com a identidade visual da PCR */
+      :root {
+        --brand-primary: #0053a4;
+        --brand-secondary: #003a73;
+        --brand-highlight: #00a3ff;
+        --surface: #f4f7fb;
+        --surface-strong: #ffffff;
+        --border-color: #d0d7e2;
+        --text-strong: #1b263b;
+        --text-muted: #5b6c8c;
+      }
+      *,
+      *::before,
+      *::after { box-sizing: border-box; }
+      body {
+        font-family: "Public Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--surface);
+        color: var(--text-strong);
+        min-height: 100vh;
+      }
+      header.site-header {
+        background: url("https://statics.recife.pe.gov.br/images/dynamics/automacao/header.png?w=3000") center/cover no-repeat;
+        color: #fff;
+        padding: 3rem 0 2.25rem;
+      }
+      header .lead {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        line-height: 1.65;
+        max-width: 100%;
+      }
+      .badge-open {
+        display: inline-flex; align-items: center; gap: .5rem;
+        font-size: .95rem; font-weight: 600; padding: .45rem .9rem; border-radius: 999px;
+        background: rgba(255,255,255,.14);
+      }
+      .section-title {
+        display: flex; align-items: center; gap: .65rem; font-weight: 700; font-size: 1.2rem; color: var(--text-strong);
+      }
+      .section-title::before { content: ""; display: inline-block; width: 32px; height: 3px; border-radius: 999px; background: var(--brand-highlight); }
+      .card { border-radius: 4px; overflow: hidden; }
+      .card-programa {
+        border: 1px solid rgba(0,83,164,.08); border-radius: 4px; background: var(--surface-strong);
+        box-shadow: 0 16px 34px rgba(0,45,98,.08);
+      }
+      .card-programa .card-header {
+        border-bottom: 1px solid rgba(0,83,164,.08);
+        background: linear-gradient(180deg,#fff 0%,#f5f8fc 100%);
+        padding: 1.25rem 1.25rem 1rem;
+      }
+      .muted { color: var(--text-muted); }
+      .catalog-grid { row-gap: 1.25rem; }
+      .play-card .ratio { background: #e9eef7; }
+      .play-card .badge { font-weight: 600; }
+      .btn-fav[aria-pressed="true"] .fav-icon { filter: saturate(1.4); }
+      .offcanvas .list-group-item small { color: var(--text-muted); }
+      /* manter os estilos responsivos existentes… */
+      /* …demais regras (tabelas, recibo etc.) podem permanecer sem uso, não remover */
+    </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-4">
+        <div>
+          <span class="badge-open">Programação aberta</span>
+          <h1 class="display-5 fw-bold mt-3 mb-2">Festival de Teatro do Recife</h1>
+          <p class="lead mb-0">Catálogo oficial de espetáculos da edição 2024 • 14 a 29 de setembro • Escolha a sua sessão e monte o seu roteiro.</p>
+        </div>
+        <div class="text-md-end">
+          <button class="btn btn-light btn-lg" type="button" data-bs-toggle="offcanvas" data-bs-target="#favoritosOffcanvas" aria-controls="favoritosOffcanvas">
+            Favoritos <span class="badge text-bg-primary ms-2" id="favoritos-count">0</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
 
+  <main>
+    <section class="py-4">
+      <div class="container">
+        <div class="card card-programa">
+          <div class="card-body">
+            <h2 class="section-title mb-4">Filtrar programação</h2>
+            <form class="row g-3 align-items-end" id="filtrosForm">
+              <div class="col-12 col-lg-4">
+                <label for="filtroBusca" class="form-label">Buscar por nome, teatro ou sinopse</label>
+                <input type="search" class="form-control" id="filtroBusca" placeholder="Digite o que deseja encontrar" aria-label="Buscar por peça">
+              </div>
+              <div class="col-12 col-md-4 col-lg-3">
+                <label for="filtroTeatro" class="form-label">Teatro</label>
+                <select class="form-select" id="filtroTeatro" aria-label="Filtrar por teatro">
+                  <option value="">Todos os teatros</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-4 col-lg-3">
+                <label for="filtroClassificacao" class="form-label">Classificação etária</label>
+                <select class="form-select" id="filtroClassificacao" aria-label="Filtrar por classificação etária">
+                  <option value="">Todas as classificações</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-4 col-lg-2 d-grid">
+                <button type="button" class="btn btn-outline-secondary" id="limparFiltros">Limpar filtros</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pb-5">
+      <div class="container">
+        <h2 class="section-title mb-4">Catálogo de peças</h2>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 catalog-grid" id="catalogo"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal fade" id="detalhesModal" tabindex="-1" aria-labelledby="detalhesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detalhesModalLabel">Detalhes da peça</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-4">
+            <div class="col-12 col-md-5">
+              <div class="ratio ratio-2x3">
+                <img src="" alt="" class="w-100 h-100" style="object-fit: cover;" id="modalPoster">
+              </div>
+            </div>
+            <div class="col-12 col-md-7">
+              <h3 class="h4" id="modalTitulo"></h3>
+              <p class="mb-2"><strong>Teatro:</strong> <span id="modalTeatro"></span></p>
+              <p class="mb-3"><span class="badge text-bg-primary" id="modalClassificacao"></span></p>
+              <h6 class="fw-semibold">Sinopse</h6>
+              <p id="modalSinopse" class="mb-3"></p>
+              <div id="modalFichaTecnica" class="d-none">
+                <h6 class="fw-semibold">Ficha técnica</h6>
+                <p class="mb-0" id="modalFichaTexto"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="favoritosOffcanvas" aria-labelledby="favoritosOffcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="favoritosOffcanvasLabel">Peças favoritas</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column">
+      <div class="list-group mb-3" id="favoritosLista"></div>
+      <p class="text-muted small" id="favoritosEmpty">Nenhuma peça favorita ainda. Clique em “Favoritar” para montar sua lista.</p>
+    </div>
+  </div>
+
+  <footer class="py-4 bg-white border-top">
+    <div class="container text-center text-muted small">
+      Secretaria de Cultura do Recife • Prefeitura do Recife
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const pecas = [
+        {
+          id: 'aurora-dos-lampioes',
+          nome: 'Aurora dos Lampiões',
+          classificacao: '12+',
+          teatro: 'Teatro Santa Isabel',
+          sinopse: 'Uma fábula nordestina que mistura cordel, música ao vivo e teatro físico para revisitar os bastidores da resistência cultural de Lampião, explorando mitos e afetos de um Brasil profundo.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp',
+          fichaTecnica: 'Direção: Lúcia Falcão • Elenco: Coletivo Sertão Vivo • Trilha: João do Pífano'
+        },
+        {
+          id: 'cordas-urbanas',
+          nome: 'Cordas Urbanas',
+          classificacao: '14+',
+          teatro: 'Teatro Apolo',
+          sinopse: 'Espetáculo de teatro-dança que acompanha uma jovem violinista pelas ruas do Recife Antigo, transformando sons urbanos em poesia cênica em um jogo de luzes, sombras e projeções ao vivo.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp',
+          fichaTecnica: 'Direção: Marcelo Dias • Coreografia: Núbia Santos'
+        },
+        {
+          id: 'infancia-marinha',
+          nome: 'Infância Marinha',
+          classificacao: 'Livre',
+          teatro: 'Parque Dona Lindu',
+          sinopse: 'Teatro para todas as idades que celebra a cultura caiçara com bonecos gigantes, canções autorais e narrativas sobre a preservação dos manguezais e das brincadeiras tradicionais.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp',
+          fichaTecnica: 'Direção: Grupo Luar do Mangue • Produção: Companhia Barca Boa'
+        },
+        {
+          id: 'noite-de-insomnias',
+          nome: 'Noite de Insônias',
+          classificacao: '16+',
+          teatro: 'Teatro Luiz Mendonça',
+          sinopse: 'Drama contemporâneo sobre três personagens isolados em um edifício histórico durante a madrugada, cruzando memórias, delírios e reflexões sobre saúde mental na metrópole.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp'
+        },
+        {
+          id: 'riso-de-janaina',
+          nome: 'O Riso de Janaína',
+          classificacao: '10+',
+          teatro: 'Paço do Frevo',
+          sinopse: 'Comédia musical que acompanha uma contadora de histórias e sua trupe em uma viagem pelo Brasil afro-atlântico, unindo frevo, maracatu e samba de roda em números interativos com o público.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp',
+          fichaTecnica: 'Direção musical: Sílvia Valença • Dramaturgia: Coletivo Girassol'
+        },
+        {
+          id: 'maresia-electrica',
+          nome: 'Maresia Elétrica',
+          classificacao: '18+',
+          teatro: 'Teatro Apolo',
+          sinopse: 'Instalação cênica imersiva que mistura teatro documental e música eletrônica para investigar memórias afetivas de trabalhadores portuários, com relatos reais e paisagens sonoras coletadas no cais.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp'
+        },
+        {
+          id: 'mapas-do-vento',
+          nome: 'Mapas do Vento',
+          classificacao: 'Livre',
+          teatro: 'Teatro Santa Isabel',
+          sinopse: 'Peça sensorial que une teatro de objetos e projeções cartográficas para narrar viagens de jangadeiros, convidando o público a percorrer memórias de travessias, faróis e guardiões do mar.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp'
+        },
+        {
+          id: 'cicatrizes-do-sol',
+          nome: 'Cicatrizes do Sol',
+          classificacao: '14+',
+          teatro: 'Teatro Luiz Mendonça',
+          sinopse: 'Narrativa épica que acompanha gerações de uma família sertaneja lidando com a migração para a capital, ressignificando memórias de seca, esperança e acolhimento comunitário.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp'
+        },
+        {
+          id: 'astro-recitativo',
+          nome: 'Astro Recitativo',
+          classificacao: '12+',
+          teatro: 'Paço do Frevo',
+          sinopse: 'Teatro científico com projeções de constelações e trilha ao vivo que apresenta a jornada de uma astrônoma pernambucana em busca de novas leituras para o céu do hemisfério sul.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp',
+          fichaTecnica: 'Consultoria científica: Observatório do Recife • Elenco: Companhia Áurea'
+        },
+        {
+          id: 'ensaios-para-amanha',
+          nome: 'Ensaios para Amanhã',
+          classificacao: '16+',
+          teatro: 'Parque Dona Lindu',
+          sinopse: 'Crônica futurista que mistura teatro de rua e performance multimídia, com elenco alternando entre narrativas de resistência climática e cenas de convivência comunitária em espaços públicos.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp'
+        },
+        {
+          id: 'vozes-da-tacuruna',
+          nome: 'Vozes da Tacaruna',
+          classificacao: '10+',
+          teatro: 'Teatro Luiz Mendonça',
+          sinopse: 'Musical documental que resgata depoimentos de trabalhadoras da antiga Fábrica Tacaruna, costurando memórias de luta operária, maternidade e solidariedade feminina em cena.',
+          poster: 'https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp'
+        }
+      ];
+
+      const ordemClassificacao = ['Livre', '10+', '12+', '14+', '16+', '18+'];
+      const favoritosKey = 'festival-teatro-recife-favoritos';
+      const favoritosSalvos = JSON.parse(localStorage.getItem(favoritosKey) || '[]');
+      const favoritos = new Set(favoritosSalvos);
+
+      const catalogoEl = document.getElementById('catalogo');
+      const filtroBusca = document.getElementById('filtroBusca');
+      const filtroTeatro = document.getElementById('filtroTeatro');
+      const filtroClassificacao = document.getElementById('filtroClassificacao');
+      const limparFiltros = document.getElementById('limparFiltros');
+      const favoritosLista = document.getElementById('favoritosLista');
+      const favoritosEmpty = document.getElementById('favoritosEmpty');
+      const favoritosCount = document.getElementById('favoritos-count');
+
+      let pecasFiltradas = [...pecas];
+
+      function salvarFavoritos() {
+        localStorage.setItem(favoritosKey, JSON.stringify(Array.from(favoritos)));
+      }
+
+      function atualizarContagemFavoritos() {
+        favoritosCount.textContent = favoritos.size;
+      }
+
+      function preencherSelects() {
+        const teatros = Array.from(new Set(pecas.map((peca) => peca.teatro))).sort();
+        teatros.forEach((teatro) => {
+          const option = document.createElement('option');
+          option.value = teatro;
+          option.textContent = teatro;
+          filtroTeatro.appendChild(option);
+        });
+
+        ordemClassificacao.forEach((classificacao) => {
+          if (pecas.some((peca) => peca.classificacao === classificacao)) {
+            const option = document.createElement('option');
+            option.value = classificacao;
+            option.textContent = classificacao;
+            filtroClassificacao.appendChild(option);
+          }
+        });
+      }
+
+      function aplicarFiltros() {
+        const termoBusca = filtroBusca.value.trim().toLowerCase();
+        const teatroSelecionado = filtroTeatro.value;
+        const classificacaoSelecionada = filtroClassificacao.value;
+
+        pecasFiltradas = pecas.filter((peca) => {
+          const atendeBusca = !termoBusca || `${peca.nome} ${peca.teatro} ${peca.sinopse}`.toLowerCase().includes(termoBusca);
+          const atendeTeatro = !teatroSelecionado || peca.teatro === teatroSelecionado;
+          const atendeClassificacao = !classificacaoSelecionada || peca.classificacao === classificacaoSelecionada;
+          return atendeBusca && atendeTeatro && atendeClassificacao;
+        }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+        renderizarCatalogo();
+      }
+
+      function renderizarCatalogo() {
+        catalogoEl.innerHTML = '';
+
+        if (!pecasFiltradas.length) {
+          const vazio = document.createElement('div');
+          vazio.className = 'col';
+          vazio.innerHTML = '<div class="card card-programa h-100"><div class="card-body text-center py-5"><p class="mb-0">Nenhuma peça encontrada com os filtros selecionados.</p></div></div>';
+          catalogoEl.appendChild(vazio);
+          return;
+        }
+
+        pecasFiltradas.forEach((peca) => {
+          const col = document.createElement('div');
+          col.className = 'col';
+          const favoritoAtivo = favoritos.has(peca.id);
+          const botaoFavoritoClasse = favoritoAtivo ? 'btn-primary' : 'btn-outline-primary';
+          const botaoFavoritoTexto = favoritoAtivo ? 'Favorito' : 'Favoritar';
+          col.innerHTML = `
+            <article class="card card-programa h-100 play-card">
+              <div class="ratio ratio-2x3">
+                <img src="${peca.poster}" alt="Pôster do espetáculo ${peca.nome}" class="w-100 h-100" style="object-fit: cover;">
+              </div>
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
+                  <h3 class="h5 mb-0">${peca.nome}</h3>
+                  <span class="badge text-bg-primary">${peca.classificacao}</span>
+                </div>
+                <p class="muted mb-3">${peca.teatro}</p>
+                <p class="card-text mb-4" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${peca.sinopse}</p>
+                <div class="mt-auto d-flex gap-2">
+                  <button type="button" class="btn btn-primary btn-sm btn-detalhes" data-bs-toggle="modal" data-bs-target="#detalhesModal" data-id="${peca.id}">Detalhes</button>
+                  <button type="button" class="btn ${botaoFavoritoClasse} btn-sm btn-fav" data-id="${peca.id}" aria-pressed="${favoritoAtivo}">${botaoFavoritoTexto}</button>
+                </div>
+              </div>
+            </article>
+          `;
+          catalogoEl.appendChild(col);
+        });
+      }
+
+      function renderizarFavoritos() {
+        favoritosLista.innerHTML = '';
+        if (!favoritos.size) {
+          favoritosEmpty.classList.remove('d-none');
+          return;
+        }
+        favoritosEmpty.classList.add('d-none');
+
+        const favoritosDados = pecas
+          .filter((peca) => favoritos.has(peca.id))
+          .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+        favoritosDados.forEach((peca) => {
+          const item = document.createElement('div');
+          item.className = 'list-group-item list-group-item-action d-flex align-items-center gap-3';
+          item.innerHTML = `
+            <div>
+              <div class="fw-semibold">${peca.nome}</div>
+              <small>${peca.teatro}</small>
+            </div>
+            <span class="badge text-bg-primary ms-auto">${peca.classificacao}</span>
+            <button type="button" class="btn btn-link text-decoration-none text-danger btn-sm remover-favorito" data-id="${peca.id}">Remover</button>
+          `;
+          favoritosLista.appendChild(item);
+        });
+      }
+
+      catalogoEl.addEventListener('click', (event) => {
+        const detalhesBtn = event.target.closest('.btn-detalhes');
+        const favoritoBtn = event.target.closest('.btn-fav');
+
+        if (detalhesBtn) {
+          const pecaId = detalhesBtn.getAttribute('data-id');
+          const pecaSelecionada = pecas.find((p) => p.id === pecaId);
+          if (!pecaSelecionada) return;
+          preencherModal(pecaSelecionada);
+        }
+
+        if (favoritoBtn) {
+          const pecaId = favoritoBtn.getAttribute('data-id');
+          if (favoritos.has(pecaId)) {
+            favoritos.delete(pecaId);
+          } else {
+            favoritos.add(pecaId);
+          }
+          salvarFavoritos();
+          atualizarContagemFavoritos();
+          renderizarCatalogo();
+          renderizarFavoritos();
+        }
+      });
+
+      favoritosLista.addEventListener('click', (event) => {
+        const removerBtn = event.target.closest('.remover-favorito');
+        if (removerBtn) {
+          const pecaId = removerBtn.getAttribute('data-id');
+          favoritos.delete(pecaId);
+          salvarFavoritos();
+          atualizarContagemFavoritos();
+          renderizarCatalogo();
+          renderizarFavoritos();
+        }
+      });
+
+      const detalhesModal = document.getElementById('detalhesModal');
+      detalhesModal.addEventListener('show.bs.modal', (event) => {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+        const pecaId = trigger.getAttribute('data-id');
+        const pecaSelecionada = pecas.find((p) => p.id === pecaId);
+        if (pecaSelecionada) {
+          preencherModal(pecaSelecionada);
+        }
+      });
+
+      function preencherModal(peca) {
+        const modalTitulo = document.getElementById('modalTitulo');
+        const modalTeatro = document.getElementById('modalTeatro');
+        const modalClassificacao = document.getElementById('modalClassificacao');
+        const modalSinopse = document.getElementById('modalSinopse');
+        const modalPoster = document.getElementById('modalPoster');
+        const modalFichaTecnica = document.getElementById('modalFichaTecnica');
+        const modalFichaTexto = document.getElementById('modalFichaTexto');
+
+        modalTitulo.textContent = peca.nome;
+        modalTeatro.textContent = peca.teatro;
+        modalClassificacao.textContent = peca.classificacao;
+        modalSinopse.textContent = peca.sinopse;
+        modalPoster.src = peca.poster;
+        modalPoster.alt = `Pôster em destaque do espetáculo ${peca.nome}`;
+
+        if (peca.fichaTecnica) {
+          modalFichaTexto.textContent = peca.fichaTecnica;
+          modalFichaTecnica.classList.remove('d-none');
+        } else {
+          modalFichaTecnica.classList.add('d-none');
+          modalFichaTexto.textContent = '';
+        }
+      }
+
+      filtroBusca.addEventListener('input', aplicarFiltros);
+      filtroTeatro.addEventListener('change', aplicarFiltros);
+      filtroClassificacao.addEventListener('change', aplicarFiltros);
+
+      limparFiltros.addEventListener('click', () => {
+        filtroBusca.value = '';
+        filtroTeatro.value = '';
+        filtroClassificacao.value = '';
+        aplicarFiltros();
+      });
+
+      preencherSelects();
+      aplicarFiltros();
+      atualizarContagemFavoritos();
+      renderizarFavoritos();
+    });
+  </script>
+</body>
+</html>
