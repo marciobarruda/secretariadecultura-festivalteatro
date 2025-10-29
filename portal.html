@@ -353,6 +353,72 @@
         border-color: #ffc107 !important;
       }
 
+      /* === Carrossel tipo Cinemark (scroll-snap) === */
+      .carousel-wrap {
+        position: relative;
+      }
+      .carousel-rail {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding: .25rem .5rem 1rem;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+      }
+      .carousel-rail::-webkit-scrollbar { height: 8px; }
+      .carousel-rail::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,.15);
+        border-radius: 999px;
+      }
+      .slide {
+        scroll-snap-align: center;
+        flex: 0 0 80%;
+        max-width: 80%;
+      }
+      @media (min-width: 576px) { .slide { flex-basis: 60%; max-width: 60%; } }
+      @media (min-width: 768px) { .slide { flex-basis: 45%; max-width: 45%; } }
+      @media (min-width: 992px) { .slide { flex-basis: 30%; max-width: 30%; } }
+
+      .slide-card {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #0b203a;
+        box-shadow: 0 14px 28px rgba(0,35,79,.18);
+      }
+      .slide-poster.ratio {
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+      }
+      .slide-overlay {
+        position: absolute;
+        inset: auto 0 0 0;
+        padding: .85rem .9rem;
+        background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(9,20,40,.8) 55%, rgba(9,20,40,.95) 100%);
+        color: #fff;
+      }
+      .slide-title { font-weight: 700; margin: 0; }
+      .slide-meta { font-size: .9rem; opacity: .9; }
+
+      .carousel-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 5;
+        width: 42px; height: 42px;
+        border-radius: 999px;
+        display: grid; place-items: center;
+        border: 1px solid rgba(255,255,255,.6);
+        background: rgba(0,0,0,.35);
+        backdrop-filter: blur(3px);
+        color: #fff;
+      }
+      .carousel-arrow:hover { background: rgba(0,0,0,.55); }
+      .carousel-arrow[data-dir="prev"] { left: .25rem; }
+      .carousel-arrow[data-dir="next"] { right: .25rem; }
+
       @media print {
         body * {
           visibility: hidden !important;
@@ -449,11 +515,16 @@
       <div class="container">
         <div class="d-flex align-items-center justify-content-between mb-3">
           <div class="section-title mb-0">Catálogo de peças</div>
-          <small class="text-muted" id="resultInfo">Exibindo 0 de 0</small>
         </div>
-        <div id="grid" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 catalog-grid">
-          <!-- cards renderizados via JS -->
+        <div class="carousel-wrap">
+          <button class="carousel-arrow" data-dir="prev" aria-label="Anterior" aria-controls="rail">‹</button>
+          <button class="carousel-arrow" data-dir="next" aria-label="Próximo" aria-controls="rail">›</button>
+
+          <div id="rail" class="carousel-rail" tabindex="0" aria-label="Vitrine de peças">
+            <!-- slides renderizados via JS -->
+          </div>
         </div>
+        <small class="text-muted d-block mt-2" id="resultInfo">Exibindo 0 de 0</small>
       </div>
     </section>
 
@@ -623,7 +694,6 @@
       const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
       const KEY_FAV = "ftr_favs";
 
-      const elGrid = $("#grid");
       const elResultInfo = $("#resultInfo");
       const elQ = $("#q");
       const elFTeatro = $("#fTeatro");
@@ -692,47 +762,106 @@
         });
       }
 
-      // ====== Card template ======
-      function cardTemplate(p) {
+      const rail = document.getElementById("rail");
+      let currentIndex = 0;
+
+      function slideTemplate(p, i, total) {
         const favPressed = isFav(p.id);
         return `
-          <div class="col">
-            <div class="card play-card h-100">
-              <div class="ratio ratio-2x3">
-                <img src="${p.poster}" alt="Pôster da peça ${p.nome}" class="w-100 h-100 object-fit-cover">
-              </div>
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                  <h5 class="card-title fw-bold mb-1">${p.nome}</h5>
-                  <span class="badge badge-age flex-shrink-0">${p.classificacao}</span>
-                </div>
-                <p class="small text-muted mb-1">${p.teatro}</p>
-                <p class="sinopse-clamp mb-3">${p.sinopse}</p>
-                <div class="mt-auto d-flex gap-2">
-                  <button class="btn btn-primary btn-sm" data-details="${p.id}">Detalhes</button>
-                  <button class="btn ${favPressed ? 'btn-warning' : 'btn-outline-warning'} btn-sm btn-fav"
-                          data-fav="${p.id}" aria-pressed="${favPressed}">
-                    ${favPressed ? '★ Favorito' : '☆ Favoritar'}
-                  </button>
-                </div>
-              </div>
-            </div>
+    <div class="slide" role="group" aria-roledescription="slide" aria-label="Peça ${i+1} de ${total}">
+      <article class="slide-card">
+        <div class="ratio ratio-2x3 slide-poster" style="background-image:url('${p.poster}')"></div>
+        <div class="slide-overlay">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <h3 class="slide-title h5">${p.nome}</h3>
+            <span class="badge badge-age">${p.classificacao}</span>
           </div>
-        `;
+          <div class="slide-meta mb-2">${p.teatro}</div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-primary" data-details="${p.id}">Detalhes</button>
+            <button class="btn btn-sm ${favPressed ? 'btn-warning' : 'btn-outline-warning'} btn-fav"
+                    data-fav="${p.id}" aria-pressed="${favPressed}">
+              ${favPressed ? '★ Favorito' : '☆ Favoritar'}
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+  `;
       }
 
-      // ====== Render grid ======
-      function renderGrid(list) {
-        elGrid.innerHTML = list.map(cardTemplate).join("");
+      function renderCarousel(list) {
+        rail.innerHTML = list.map((p, i) => slideTemplate(p, i, list.length)).join("");
         elResultInfo.textContent = `Exibindo ${list.length} de ${pecas.length}`;
         // Bind dos botões
-        $$("button[data-details]").forEach(btn => {
+        $$("button[data-details]", rail).forEach(btn => {
           btn.addEventListener("click", () => openDetails(btn.getAttribute("data-details")));
         });
-        $$("button[data-fav]").forEach(btn => {
+        $$("button[data-fav]", rail).forEach(btn => {
           btn.addEventListener("click", () => toggleFav(btn.getAttribute("data-fav")));
         });
+        // volta ao início após re-render
+        currentIndex = 0;
+        snapTo(0);
       }
+
+      function slideWidth() {
+        const first = rail.querySelector(".slide");
+        return first ? first.getBoundingClientRect().width + 16 /*gap*/ : rail.clientWidth;
+      }
+
+      function snapTo(index) {
+        const slides = $$(".slide", rail);
+        if (!slides.length) return;
+        currentIndex = Math.max(0, Math.min(index, slides.length - 1));
+        const x = slides[currentIndex].offsetLeft - rail.offsetLeft - 8; // leve padding
+        rail.scrollTo({ left: x, behavior: "smooth" });
+      }
+
+      function scrollBySlide(dir = 1) {
+        const slides = $$(".slide", rail);
+        if (!slides.length) return;
+        snapTo(currentIndex + (dir > 0 ? 1 : -1));
+      }
+
+      // Setas
+      $$(".carousel-arrow").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const dir = btn.dataset.dir === "next" ? 1 : -1;
+          scrollBySlide(dir);
+        });
+        // Acessibilidade: teclado
+        btn.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter" || ev.key === " ") {
+            ev.preventDefault();
+            const dir = btn.dataset.dir === "next" ? 1 : -1;
+            scrollBySlide(dir);
+          }
+        });
+      });
+
+      // Atualiza currentIndex ao rolar manualmente ( aproxima ao slide mais próximo )
+      let snapTO;
+      rail.addEventListener("scroll", () => {
+        clearTimeout(snapTO);
+        snapTO = setTimeout(() => {
+          const slides = $$(".slide", rail);
+          const center = rail.scrollLeft + rail.clientWidth / 2;
+          let closest = 0, best = Infinity;
+          slides.forEach((s, i) => {
+            const mid = s.offsetLeft + s.clientWidth / 2;
+            const d = Math.abs(center - mid);
+            if (d < best) { best = d; closest = i; }
+          });
+          currentIndex = closest;
+        }, 80);
+      });
+
+      // Teclado no rail (setas direcionais)
+      rail.addEventListener("keydown", (ev) => {
+        if (ev.key === "ArrowRight") scrollBySlide(1);
+        if (ev.key === "ArrowLeft")  scrollBySlide(-1);
+      });
 
       // ====== Filtro ======
       function applyFilters() {
@@ -747,14 +876,14 @@
           return textMatch && teatroMatch && classMatch;
         });
 
-        renderGrid(filtered);
+        renderCarousel(filtered);
       }
 
       function resetFilters() {
         elQ.value = "";
         elFTeatro.value = "";
         elFClass.value = "";
-        renderGrid(pecas);
+        renderCarousel(pecas);
       }
 
       // ====== Detalhes (Modal) ======
@@ -843,7 +972,7 @@
           setFavs([]);
           updateFavCount();
           renderFavList();
-          renderGrid(pecas); // ressincroniza botões
+          renderCarousel(pecas); // ressincroniza botões
         }
       });
 
@@ -861,7 +990,7 @@
       function init() {
         renderFilters();
         updateFavCount();
-        renderGrid(pecas);
+        renderCarousel(pecas);
       }
       init();
     </script>
