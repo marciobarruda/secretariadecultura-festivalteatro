@@ -415,6 +415,10 @@
       return favoritos.has(id);
     }
 
+    function updateFavCount() {
+      elFavCount.textContent = favoritos.size;
+    }
+
     function renderFavList() {
       elFavList.innerHTML = "";
       const itens = Array.from(favoritos)
@@ -441,7 +445,7 @@
           elFavList.appendChild(item);
         });
       }
-      elFavCount.textContent = favoritos.size;
+      updateFavCount();
     }
 
     function toggleFav(id) {
@@ -596,6 +600,7 @@
 
     function init() {
       renderFilters();
+      updateFavCount();
       renderFavList();
       renderCarousel(pecas);
 
