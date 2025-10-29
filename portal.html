@@ -1,1 +1,631 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Festival de Teatro do Recife • Catálogo</title>
+    <link
+      rel="icon"
+      href="https://statics.recife.pe.gov.br/images/dynamics/conecta/icons/favicon.png?w=32&h=32&fit=fill&border=2,transparent,shrink"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      /* manter todo o CSS existente exatamente como fornecido,
+         pois já está alinhado com a identidade visual da PCR */
+      :root {
+        --brand-primary: #0053a4;
+        --brand-secondary: #003a73;
+        --brand-highlight: #00a3ff;
+        --surface: #f4f7fb;
+        --surface-strong: #ffffff;
+        --border-color: #d0d7e2;
+        --text-strong: #1b263b;
+        --text-muted: #5b6c8c;
+      }
+      *,
+      *::before,
+      *::after { box-sizing: border-box; }
+      body {
+        font-family: "Public Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--surface);
+        color: var(--text-strong);
+        min-height: 100vh;
+      }
+      header.site-header {
+        background: url("https://statics.recife.pe.gov.br/images/dynamics/automacao/header.png?w=3000") center/cover no-repeat;
+        color: #fff;
+        padding: 3rem 0 2.25rem;
+      }
+      header .lead {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        line-height: 1.65;
+        max-width: 100%;
+      }
+      .badge-open {
+        display: inline-flex; align-items: center; gap: .5rem;
+        font-size: .95rem; font-weight: 600; padding: .45rem .9rem; border-radius: 999px;
+        background: rgba(255,255,255,.14);
+      }
+      .section-title {
+        display: flex; align-items: center; gap: .65rem; font-weight: 700; font-size: 1.2rem; color: var(--text-strong);
+      }
+      .section-title::before { content: ""; display: inline-block; width: 32px; height: 3px; border-radius: 999px; background: var(--brand-highlight); }
+      .card { border-radius: 4px; overflow: hidden; }
+      .card-programa {
+        border: 1px solid rgba(0,83,164,.08); border-radius: 4px; background: var(--surface-strong);
+        box-shadow: 0 16px 34px rgba(0,45,98,.08);
+      }
+      .card-programa .card-header {
+        border-bottom: 1px solid rgba(0,83,164,.08);
+        background: linear-gradient(180deg,#fff 0%,#f5f8fc 100%);
+        padding: 1.25rem 1.25rem 1rem;
+      }
+      .muted { color: var(--text-muted); }
+      .catalog-grid { row-gap: 1.25rem; }
+      .play-card .ratio { background: #e9eef7; }
+      .play-card .badge { font-weight: 600; }
+      .btn-fav[aria-pressed="true"] .fav-icon { filter: saturate(1.4); }
+      .offcanvas .list-group-item small { color: var(--text-muted); }
+      /* === Carrossel tipo Cinemark (scroll-snap) === */
+      .carousel-wrap {
+        position: relative;
+      }
+      .carousel-rail {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding: .25rem .5rem 1rem;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+      }
+      .carousel-rail::-webkit-scrollbar { height: 8px; }
+      .carousel-rail::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,.15);
+        border-radius: 999px;
+      }
+      .slide {
+        scroll-snap-align: center;
+        flex: 0 0 80%;
+        max-width: 80%;
+      }
+      @media (min-width: 576px) { .slide { flex-basis: 60%; max-width: 60%; } }
+      @media (min-width: 768px) { .slide { flex-basis: 45%; max-width: 45%; } }
+      @media (min-width: 992px) { .slide { flex-basis: 30%; max-width: 30%; } }
 
+      .slide-card {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #0b203a;
+        box-shadow: 0 14px 28px rgba(0,35,79,.18);
+      }
+      .slide-poster.ratio {
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+      }
+      .slide-overlay {
+        position: absolute;
+        inset: auto 0 0 0;
+        padding: .85rem .9rem;
+        background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(9,20,40,.8) 55%, rgba(9,20,40,.95) 100%);
+        color: #fff;
+      }
+      .slide-title { font-weight: 700; margin: 0; }
+      .slide-meta { font-size: .9rem; opacity: .9; }
+
+      .carousel-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 5;
+        width: 42px; height: 42px;
+        border-radius: 999px;
+        display: grid; place-items: center;
+        border: 1px solid rgba(255,255,255,.6);
+        background: rgba(0,0,0,.35);
+        backdrop-filter: blur(3px);
+        color: #fff;
+      }
+      .carousel-arrow:hover { background: rgba(0,0,0,.55); }
+      .carousel-arrow[data-dir="prev"] { left: .25rem; }
+      .carousel-arrow[data-dir="next"] { right: .25rem; }
+      .badge-age {
+        background: var(--brand-highlight);
+        color: #002044;
+      }
+      /* manter os estilos responsivos existentes… */
+      /* …demais regras (tabelas, recibo etc.) podem permanecer sem uso, não remover */
+    </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3">
+        <div>
+          <span class="badge-open mb-3">Programação aberta</span>
+          <h1 class="display-5 fw-bold mb-2">Festival de Teatro do Recife</h1>
+          <p class="lead mb-0">De 10 a 24 de setembro, os palcos da cidade recebem produções autorais, companhias convidadas e oficinas especiais.</p>
+        </div>
+        <button class="btn btn-outline-light align-self-lg-start" type="button" data-bs-toggle="offcanvas" data-bs-target="#favoritosOffcanvas" aria-controls="favoritosOffcanvas">
+          Favoritos <span class="badge bg-light text-primary ms-2" id="contadorFavoritos">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="py-5">
+    <section class="pb-4">
+      <div class="container">
+        <div class="card card-programa">
+          <div class="card-body">
+            <form class="row g-3 align-items-end" id="filtrosForm">
+              <div class="col-12 col-lg-4">
+                <label for="buscaInput" class="form-label muted text-uppercase small fw-semibold">Buscar</label>
+                <input type="search" class="form-control" id="buscaInput" placeholder="Digite nome da peça, teatro ou palavra-chave" />
+              </div>
+              <div class="col-12 col-sm-6 col-lg-3">
+                <label for="teatroSelect" class="form-label muted text-uppercase small fw-semibold">Teatro</label>
+                <select class="form-select" id="teatroSelect">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+              <div class="col-12 col-sm-6 col-lg-3">
+                <label for="classificacaoSelect" class="form-label muted text-uppercase small fw-semibold">Classificação</label>
+                <select class="form-select" id="classificacaoSelect">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+              <div class="col-12 col-lg-2 d-flex">
+                <button type="button" class="btn btn-outline-primary w-100 mt-auto" id="limparFiltros">Limpar filtros</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h2 class="section-title mb-0">Catálogo de peças</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow" data-dir="prev" aria-label="Anterior" aria-controls="rail">‹</button>
+          <button class="carousel-arrow" data-dir="next" aria-label="Próximo" aria-controls="rail">›</button>
+
+          <div id="rail" class="carousel-rail" tabindex="0" aria-label="Vitrine de peças">
+            <!-- slides renderizados via JS -->
+          </div>
+        </div>
+        <small class="text-muted d-block mt-2" id="resultInfo">Exibindo 0 de 0</small>
+      </div>
+    </section>
+  </main>
+
+  <footer class="py-4 border-top" style="background: var(--surface-strong);">
+    <div class="container text-center">
+      <small class="muted">Secretaria de Cultura do Recife • Prefeitura do Recife</small>
+    </div>
+  </footer>
+
+  <div class="modal fade" id="detalhesModal" tabindex="-1" aria-labelledby="detalhesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detalhesModalLabel">Detalhes da peça</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-4">
+            <div class="col-12 col-md-5">
+              <div class="ratio ratio-2x3 bg-light rounded">
+                <img src="" alt="Pôster da peça" class="w-100 h-100 object-fit-cover" id="modalPoster" />
+              </div>
+            </div>
+            <div class="col-12 col-md-7">
+              <h3 class="h4" id="modalTitulo"></h3>
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="badge bg-primary" id="modalClassificacao"></span>
+                <span class="muted" id="modalTeatro"></span>
+              </div>
+              <p class="mb-0" id="modalSinopse"></p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="favoritosOffcanvas" aria-labelledby="favoritosOffcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="favoritosOffcanvasLabel">Favoritos</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column">
+      <div class="list-group list-group-flush mb-3" id="listaFavoritos"></div>
+      <p class="muted small mb-0" id="favoritosVazio">Nenhuma peça favoritada ainda. Escolha suas preferidas no catálogo.</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const $ = (selector, scope = document) => scope.querySelector(selector);
+    const $$ = (selector, scope = document) => Array.from(scope.querySelectorAll(selector));
+
+    const pecas = [
+      {
+        id: "tempestade-sombria",
+        nome: "A Tempestade Sombria",
+        classificacao: "12+",
+        teatro: "Teatro Santa Isabel",
+        sinopse:
+          "Um coletivo de atores recifenses reimagina a obra clássica de Shakespeare, misturando música eletrônica e projeções para narrar as relações de poder, perdão e afeto em uma ilha misteriosa do Atlântico.",
+        poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9bPxa7RCz9OF_hHSNY3ETnRlyhRbarip5pAFenuVB35HB2r7LDh4CLKrUHKihMnYDkUs&usqp=CAU"
+      },
+      {
+        id: "vozes-do-frevo",
+        nome: "Vozes do Frevo",
+        classificacao: "Livre",
+        teatro: "Paço do Frevo",
+        sinopse:
+          "Documentário cênico que mistura teatro, dança e depoimentos reais para contar a trajetória de mestres do frevo que mantêm viva a tradição da música e da dança pelas gerações nas ruas do Recife.",
+        poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9bPxa7RCz9OF_hHSNY3ETnRlyhRbarip5pAFenuVB35HB2r7LDh4CLKrUHKihMnYDkUs&usqp=CAU"
+      },
+      {
+        id: "maresia",
+        nome: "Maresia",
+        classificacao: "14+",
+        teatro: "Teatro Apolo",
+        sinopse:
+          "Uma dramaturgia autoral que acompanha a vida de pescadores da RMR diante das mudanças climáticas. Com cenografia imersiva e música ao vivo, a peça provoca reflexões sobre memória, pertencimento e resistência comunitária.",
+        poster: "https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp"
+      },
+      {
+        id: "cicatrizes",
+        nome: "Cicatrizes Invisíveis",
+        classificacao: "16+",
+        teatro: "Teatro Luiz Mendonça",
+        sinopse:
+          "Espetáculo de teatro-documentário que reúne relatos de mulheres de diferentes gerações sobre autocuidado e redes de apoio. A encenação utiliza projeções de cartas, fotografias e gravações originais para compor a narrativa.",
+        poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9bPxa7RCz9OF_hHSNY3ETnRlyhRbarip5pAFenuVB35HB2r7LDh4CLKrUHKihMnYDkUs&usqp=CAU"
+      },
+      {
+        id: "infancia-sonhada",
+        nome: "Infância Sonhada",
+        classificacao: "10+",
+        teatro: "Parque Dona Lindu",
+        sinopse:
+          "Espetáculo ao ar livre com acrobacias, bonecos gigantes e trilha original que convida o público a revisitar memórias de infância, valorizando brincadeiras populares e histórias contadas nos quintais do Recife.",
+        poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9bPxa7RCz9OF_hHSNY3ETnRlyhRbarip5pAFenuVB35HB2r7LDh4CLKrUHKihMnYDkUs&usqp=CAU"
+      },
+      {
+        id: "nuvem",
+        nome: "Nuvem de Pássaros",
+        classificacao: "Livre",
+        teatro: "Teatro Santa Isabel",
+        sinopse:
+          "Grupo de teatro infantil explora histórias inspiradas em mitos amazônicos com recursos de sombras, manipulação de objetos e canções originais, convidando crianças e adultos para uma jornada poética pelo céu nordestino.",
+        poster: "https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp"
+      },
+      {
+        id: "ensaio",
+        nome: "Ensaio Sobre o Fim",
+        classificacao: "18+",
+        teatro: "Teatro Apolo",
+        sinopse:
+          "Três performers investigam histórias reais de colapsos urbanos e ambientais para propor novos futuros possíveis. A montagem combina instalações sonoras, dramaturgia fragmentada e momentos de improvisação com o público.",
+        poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9bPxa7RCz9OF_hHSNY3ETnRlyhRbarip5pAFenuVB35HB2r7LDh4CLKrUHKihMnYDkUs&usqp=CAU"
+      },
+      {
+        id: "aurora",
+        nome: "Aurora no Recife",
+        classificacao: "12+",
+        teatro: "Teatro Luiz Mendonça",
+        sinopse:
+          "Combinando teatro físico e música instrumental, a peça acompanha uma pesquisadora que retorna à cidade natal após décadas no exterior para reconstruir memórias familiares e enfrentar segredos guardados pela comunidade.",
+        poster: "https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp"
+      },
+      {
+        id: "mar-de-gente",
+        nome: "Mar de Gente",
+        classificacao: "14+",
+        teatro: "Paço do Frevo",
+        sinopse:
+          "Um coral cênico formado por moradores da comunidade do Pilar ocupa o Paço com relatos sobre identidade, festas populares e futuro. A encenação interativa convida a plateia a circular pelo espaço e participar dos cantos.",
+        poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9bPxa7RCz9OF_hHSNY3ETnRlyhRbarip5pAFenuVB35HB2r7LDh4CLKrUHKihMnYDkUs&usqp=CAU"
+      },
+      {
+        id: "cidade-invisivel",
+        nome: "Cidade Invisível",
+        classificacao: "16+",
+        teatro: "Teatro Apolo",
+        sinopse:
+          "Inspirado em narrativas de Italo Calvino, o espetáculo leva o público a percorrer cartografias afetivas do Recife contemporâneo, misturando performances itinerantes, projeções urbanas e trilha composta por artistas locais.",
+        poster: "https://assets.bileto.sympla.com.br/eventmanager/production/gr8ca4bpfsukhu930gu1s4e23j052pl35o0bgji1o6ebt6vdho17om62mobpdh4svlfspuad73stmbc56e252cocmst0q78bd2mr4g.webp"
+      }
+    ];
+
+    const elBusca = document.getElementById("buscaInput");
+    const elFTeatro = document.getElementById("teatroSelect");
+    const elFClass = document.getElementById("classificacaoSelect");
+    const elClear = document.getElementById("limparFiltros");
+    const elFavList = document.getElementById("listaFavoritos");
+    const elFavEmpty = document.getElementById("favoritosVazio");
+    const elFavCount = document.getElementById("contadorFavoritos");
+    const elResultInfo = document.getElementById("resultInfo");
+
+    const modalEl = document.getElementById("detalhesModal");
+    const modalTitulo = document.getElementById("modalTitulo");
+    const modalTeatro = document.getElementById("modalTeatro");
+    const modalClassificacao = document.getElementById("modalClassificacao");
+    const modalSinopse = document.getElementById("modalSinopse");
+    const modalPoster = document.getElementById("modalPoster");
+    const detalhesModal = new bootstrap.Modal(modalEl);
+
+    const rail = document.getElementById("rail");
+    let currentIndex = 0;
+
+    const favoritosKey = "festival-teatro-favoritos";
+    const favoritos = new Set(JSON.parse(localStorage.getItem(favoritosKey) || "[]"));
+
+    function renderFilters() {
+      const teatros = Array.from(new Set(pecas.map((peca) => peca.teatro))).sort();
+      const classificacoes = Array.from(new Set(pecas.map((peca) => peca.classificacao)));
+      const ordemClass = ["Livre", "10+", "12+", "14+", "16+", "18+"];
+      classificacoes.sort((a, b) => ordemClass.indexOf(a) - ordemClass.indexOf(b));
+
+      elFTeatro.innerHTML = '<option value="">Todos</option>';
+      elFClass.innerHTML = '<option value="">Todas</option>';
+
+      teatros.forEach((teatro) => {
+        const option = document.createElement("option");
+        option.value = teatro;
+        option.textContent = teatro;
+        elFTeatro.appendChild(option);
+      });
+
+      classificacoes.forEach((classificacao) => {
+        const option = document.createElement("option");
+        option.value = classificacao;
+        option.textContent = classificacao;
+        elFClass.appendChild(option);
+      });
+    }
+
+    function saveFavs() {
+      localStorage.setItem(favoritosKey, JSON.stringify(Array.from(favoritos)));
+    }
+
+    function isFav(id) {
+      return favoritos.has(id);
+    }
+
+    function updateFavCount() {
+      elFavCount.textContent = favoritos.size;
+    }
+
+    function renderFavList() {
+      elFavList.innerHTML = "";
+      const itens = Array.from(favoritos)
+        .map((id) => pecas.find((peca) => peca.id === id))
+        .filter(Boolean);
+
+      if (!itens.length) {
+        elFavEmpty.classList.remove("d-none");
+      } else {
+        elFavEmpty.classList.add("d-none");
+        itens.forEach((peca) => {
+          const item = document.createElement("div");
+          item.className = "list-group-item list-group-item-action";
+          item.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between w-100 gap-3">
+              <div class="me-auto">
+                <h6 class="mb-1">${peca.nome}</h6>
+                <small>${peca.teatro}</small>
+              </div>
+              <span class="badge bg-primary flex-shrink-0">${peca.classificacao}</span>
+              <button type="button" class="btn btn-link text-danger p-0 ms-2 flex-shrink-0" data-remove="${peca.id}">Remover</button>
+            </div>
+          `;
+          elFavList.appendChild(item);
+        });
+      }
+      updateFavCount();
+    }
+
+    function toggleFav(id) {
+      if (!id) return;
+      if (favoritos.has(id)) {
+        favoritos.delete(id);
+      } else {
+        favoritos.add(id);
+      }
+      saveFavs();
+      renderFavList();
+      applyFilters();
+    }
+
+    function openDetails(id) {
+      const peca = pecas.find((item) => item.id === id);
+      if (!peca) return;
+      modalTitulo.textContent = peca.nome;
+      modalTeatro.textContent = peca.teatro;
+      modalClassificacao.textContent = peca.classificacao;
+      modalSinopse.textContent = peca.sinopse;
+      modalPoster.src = peca.poster;
+      modalPoster.alt = `Pôster da peça ${peca.nome}`;
+      detalhesModal.show();
+    }
+
+    const railEmptyState = () => {
+      rail.innerHTML = `
+        <div class="w-100 text-center text-muted py-5">
+          Nenhuma peça encontrada com os filtros aplicados.
+        </div>
+      `;
+      elResultInfo.textContent = `Exibindo 0 de ${pecas.length}`;
+    };
+
+    function slideTemplate(p, i, total) {
+      const favPressed = isFav(p.id);
+      return `
+        <div class="slide" role="group" aria-roledescription="slide" aria-label="Peça ${i + 1} de ${total}">
+          <article class="slide-card">
+            <div class="ratio ratio-2x3 slide-poster" style="background-image:url('${p.poster}')"></div>
+            <div class="slide-overlay">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <h3 class="slide-title h5">${p.nome}</h3>
+                <span class="badge badge-age">${p.classificacao}</span>
+              </div>
+              <div class="slide-meta mb-2">${p.teatro}</div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-primary" data-details="${p.id}">Detalhes</button>
+                <button class="btn btn-sm ${favPressed ? "btn-warning" : "btn-outline-warning"} btn-fav"
+                        data-fav="${p.id}" aria-pressed="${favPressed}">
+                  ${favPressed ? "★ Favorito" : "☆ Favoritar"}
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+      `;
+    }
+
+    function renderCarousel(list) {
+      if (!list.length) {
+        railEmptyState();
+        currentIndex = 0;
+        return;
+      }
+
+      rail.innerHTML = list.map((p, i) => slideTemplate(p, i, list.length)).join("");
+      elResultInfo.textContent = `Exibindo ${list.length} de ${pecas.length}`;
+      $$("button[data-details]", rail).forEach((btn) => {
+        btn.addEventListener("click", () => openDetails(btn.getAttribute("data-details")));
+      });
+      $$("button[data-fav]", rail).forEach((btn) => {
+        btn.addEventListener("click", () => toggleFav(btn.getAttribute("data-fav")));
+      });
+      currentIndex = 0;
+      snapTo(0);
+    }
+
+    function slideWidth() {
+      const first = rail.querySelector(".slide");
+      return first ? first.getBoundingClientRect().width + 16 /*gap*/ : rail.clientWidth;
+    }
+
+    function snapTo(index) {
+      const slides = $$(".slide", rail);
+      if (!slides.length) return;
+      currentIndex = Math.max(0, Math.min(index, slides.length - 1));
+      const x = slides[currentIndex].offsetLeft - rail.offsetLeft - 8;
+      rail.scrollTo({ left: x, behavior: "smooth" });
+    }
+
+    function scrollBySlide(dir = 1) {
+      const slides = $$(".slide", rail);
+      if (!slides.length) return;
+      snapTo(currentIndex + (dir > 0 ? 1 : -1));
+    }
+
+    $$(".carousel-arrow").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const dir = btn.dataset.dir === "next" ? 1 : -1;
+        scrollBySlide(dir);
+      });
+      btn.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          const dir = btn.dataset.dir === "next" ? 1 : -1;
+          scrollBySlide(dir);
+        }
+      });
+    });
+
+    let snapTO;
+    rail.addEventListener("scroll", () => {
+      clearTimeout(snapTO);
+      snapTO = setTimeout(() => {
+        const slides = $$(".slide", rail);
+        const center = rail.scrollLeft + rail.clientWidth / 2;
+        let closest = 0;
+        let best = Infinity;
+        slides.forEach((s, i) => {
+          const mid = s.offsetLeft + s.clientWidth / 2;
+          const d = Math.abs(center - mid);
+          if (d < best) {
+            best = d;
+            closest = i;
+          }
+        });
+        currentIndex = closest;
+      }, 80);
+    });
+
+    rail.addEventListener("keydown", (ev) => {
+      if (ev.key === "ArrowRight") scrollBySlide(1);
+      if (ev.key === "ArrowLeft") scrollBySlide(-1);
+    });
+
+    function applyFilters() {
+      const q = elBusca.value.trim().toLowerCase();
+      const t = elFTeatro.value;
+      const c = elFClass.value;
+
+      const filtered = pecas.filter((p) => {
+        const textMatch = !q || [p.nome, p.teatro, p.sinopse].some((v) => v.toLowerCase().includes(q));
+        const teatroMatch = !t || p.teatro === t;
+        const classMatch = !c || p.classificacao === c;
+        return textMatch && teatroMatch && classMatch;
+      });
+
+      renderCarousel(filtered);
+    }
+
+    function init() {
+      renderFilters();
+      updateFavCount();
+      renderFavList();
+      renderCarousel(pecas);
+
+      [elBusca, elFTeatro, elFClass].forEach((el) => {
+        el.addEventListener("input", applyFilters);
+        el.addEventListener("change", applyFilters);
+      });
+
+      elClear.addEventListener("click", () => {
+        elBusca.value = "";
+        elFTeatro.value = "";
+        elFClass.value = "";
+        renderCarousel(pecas);
+        elResultInfo.textContent = `Exibindo ${pecas.length} de ${pecas.length}`;
+        elBusca.focus();
+      });
+
+      elFavList.addEventListener("click", (ev) => {
+        const btn = ev.target.closest("button[data-remove]");
+        if (!btn) return;
+        toggleFav(btn.getAttribute("data-remove"));
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
