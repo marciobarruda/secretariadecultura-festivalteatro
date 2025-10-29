@@ -76,6 +76,75 @@
       .play-card .badge { font-weight: 600; }
       .btn-fav[aria-pressed="true"] .fav-icon { filter: saturate(1.4); }
       .offcanvas .list-group-item small { color: var(--text-muted); }
+      /* === Carrossel tipo Cinemark (scroll-snap) === */
+      .carousel-wrap {
+        position: relative;
+      }
+      .carousel-rail {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding: .25rem .5rem 1rem;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+      }
+      .carousel-rail::-webkit-scrollbar { height: 8px; }
+      .carousel-rail::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,.15);
+        border-radius: 999px;
+      }
+      .slide {
+        scroll-snap-align: center;
+        flex: 0 0 80%;
+        max-width: 80%;
+      }
+      @media (min-width: 576px) { .slide { flex-basis: 60%; max-width: 60%; } }
+      @media (min-width: 768px) { .slide { flex-basis: 45%; max-width: 45%; } }
+      @media (min-width: 992px) { .slide { flex-basis: 30%; max-width: 30%; } }
+
+      .slide-card {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #0b203a;
+        box-shadow: 0 14px 28px rgba(0,35,79,.18);
+      }
+      .slide-poster.ratio {
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+      }
+      .slide-overlay {
+        position: absolute;
+        inset: auto 0 0 0;
+        padding: .85rem .9rem;
+        background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(9,20,40,.8) 55%, rgba(9,20,40,.95) 100%);
+        color: #fff;
+      }
+      .slide-title { font-weight: 700; margin: 0; }
+      .slide-meta { font-size: .9rem; opacity: .9; }
+
+      .carousel-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 5;
+        width: 42px; height: 42px;
+        border-radius: 999px;
+        display: grid; place-items: center;
+        border: 1px solid rgba(255,255,255,.6);
+        background: rgba(0,0,0,.35);
+        backdrop-filter: blur(3px);
+        color: #fff;
+      }
+      .carousel-arrow:hover { background: rgba(0,0,0,.55); }
+      .carousel-arrow[data-dir="prev"] { left: .25rem; }
+      .carousel-arrow[data-dir="next"] { right: .25rem; }
+      .badge-age {
+        background: var(--brand-highlight);
+        color: #002044;
+      }
       /* manter os estilos responsivos existentes… */
       /* …demais regras (tabelas, recibo etc.) podem permanecer sem uso, não remover */
     </style>
@@ -131,9 +200,16 @@
       <div class="container">
         <div class="d-flex align-items-center justify-content-between mb-3">
           <h2 class="section-title mb-0">Catálogo de peças</h2>
-          <small class="text-muted" id="contadorResultados">0 apresentações</small>
         </div>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4 catalog-grid" id="catalogoContainer" aria-live="polite"></div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow" data-dir="prev" aria-label="Anterior" aria-controls="rail">‹</button>
+          <button class="carousel-arrow" data-dir="next" aria-label="Próximo" aria-controls="rail">›</button>
+
+          <div id="rail" class="carousel-rail" tabindex="0" aria-label="Vitrine de peças">
+            <!-- slides renderizados via JS -->
+          </div>
+        </div>
+        <small class="text-muted d-block mt-2" id="resultInfo">Exibindo 0 de 0</small>
       </div>
     </section>
   </main>
@@ -188,6 +264,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    const $ = (selector, scope = document) => scope.querySelector(selector);
+    const $$ = (selector, scope = document) => Array.from(scope.querySelectorAll(selector));
+
     const pecas = [
       {
         id: "tempestade-sombria",
@@ -281,219 +360,267 @@
       }
     ];
 
-    const catalogoContainer = document.getElementById("catalogoContainer");
-    const contadorResultados = document.getElementById("contadorResultados");
-    const buscaInput = document.getElementById("buscaInput");
-    const teatroSelect = document.getElementById("teatroSelect");
-    const classificacaoSelect = document.getElementById("classificacaoSelect");
-    const limparFiltrosBtn = document.getElementById("limparFiltros");
-    const listaFavoritos = document.getElementById("listaFavoritos");
-    const favoritosVazio = document.getElementById("favoritosVazio");
-    const contadorFavoritos = document.getElementById("contadorFavoritos");
+    const elBusca = document.getElementById("buscaInput");
+    const elFTeatro = document.getElementById("teatroSelect");
+    const elFClass = document.getElementById("classificacaoSelect");
+    const elClear = document.getElementById("limparFiltros");
+    const elFavList = document.getElementById("listaFavoritos");
+    const elFavEmpty = document.getElementById("favoritosVazio");
+    const elFavCount = document.getElementById("contadorFavoritos");
+    const elResultInfo = document.getElementById("resultInfo");
 
+    const modalEl = document.getElementById("detalhesModal");
     const modalTitulo = document.getElementById("modalTitulo");
     const modalTeatro = document.getElementById("modalTeatro");
     const modalClassificacao = document.getElementById("modalClassificacao");
     const modalSinopse = document.getElementById("modalSinopse");
     const modalPoster = document.getElementById("modalPoster");
+    const detalhesModal = new bootstrap.Modal(modalEl);
+
+    const rail = document.getElementById("rail");
+    let currentIndex = 0;
 
     const favoritosKey = "festival-teatro-favoritos";
     const favoritos = new Set(JSON.parse(localStorage.getItem(favoritosKey) || "[]"));
 
-    function atualizarSelects() {
+    function renderFilters() {
       const teatros = Array.from(new Set(pecas.map((peca) => peca.teatro))).sort();
-      const classificacoes = Array.from(new Set(pecas.map((peca) => peca.classificacao))).sort((a, b) => {
-        const order = ["Livre", "10+", "12+", "14+", "16+", "18+"];
-        return order.indexOf(a) - order.indexOf(b);
-      });
+      const classificacoes = Array.from(new Set(pecas.map((peca) => peca.classificacao)));
+      const ordemClass = ["Livre", "10+", "12+", "14+", "16+", "18+"];
+      classificacoes.sort((a, b) => ordemClass.indexOf(a) - ordemClass.indexOf(b));
+
+      elFTeatro.innerHTML = '<option value="">Todos</option>';
+      elFClass.innerHTML = '<option value="">Todas</option>';
 
       teatros.forEach((teatro) => {
         const option = document.createElement("option");
         option.value = teatro;
         option.textContent = teatro;
-        teatroSelect.appendChild(option);
+        elFTeatro.appendChild(option);
       });
 
       classificacoes.forEach((classificacao) => {
         const option = document.createElement("option");
         option.value = classificacao;
         option.textContent = classificacao;
-        classificacaoSelect.appendChild(option);
+        elFClass.appendChild(option);
       });
     }
 
-    function criarCard(peca) {
-      const col = document.createElement("div");
-      col.className = "col";
-
-      const card = document.createElement("article");
-      card.className = "card play-card h-100 shadow-sm";
-      card.innerHTML = `
-        <div class="ratio ratio-2x3">
-          <img src="${peca.poster}" alt="Pôster da peça ${peca.nome}" class="w-100 h-100 object-fit-cover" />
-        </div>
-        <div class="card-body d-flex flex-column">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <h3 class="h5 mb-0">${peca.nome}</h3>
-            <span class="badge bg-primary">${peca.classificacao}</span>
-          </div>
-          <p class="muted small mb-3">${peca.teatro}</p>
-          <p class="small mb-4" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">
-            ${peca.sinopse}
-          </p>
-          <div class="mt-auto d-flex gap-2">
-            <button type="button" class="btn btn-outline-primary btn-sm w-50" data-action="detalhes" data-id="${peca.id}" data-bs-toggle="modal" data-bs-target="#detalhesModal">Detalhes</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm w-50 btn-fav" data-action="favoritar" data-id="${peca.id}" aria-pressed="${favoritos.has(peca.id)}">
-              <span class="fav-icon">&#9829;</span> Favoritar
-            </button>
-          </div>
-        </div>
-      `;
-
-      col.appendChild(card);
-      return col;
+    function saveFavs() {
+      localStorage.setItem(favoritosKey, JSON.stringify(Array.from(favoritos)));
     }
 
-    function aplicarFiltros() {
-      const termo = buscaInput.value.trim().toLowerCase();
-      const teatro = teatroSelect.value;
-      const classificacao = classificacaoSelect.value;
-
-      const filtradas = pecas.filter((peca) => {
-        const buscaTexto = [peca.nome, peca.teatro, peca.sinopse]
-          .join(" ")
-          .toLowerCase()
-          .includes(termo);
-        const teatroOk = teatro ? peca.teatro === teatro : true;
-        const classificacaoOk = classificacao ? peca.classificacao === classificacao : true;
-        return buscaTexto && teatroOk && classificacaoOk;
-      });
-
-      renderizarCatalogo(filtradas);
+    function isFav(id) {
+      return favoritos.has(id);
     }
 
-    function renderizarCatalogo(lista) {
-      catalogoContainer.innerHTML = "";
-      if (lista.length === 0) {
-        const vazio = document.createElement("div");
-        vazio.className = "col";
-        vazio.innerHTML = `
-          <div class="card card-programa h-100 d-flex align-items-center justify-content-center text-center p-4">
-            <p class="mb-0">Nenhuma peça encontrada com os filtros aplicados.</p>
-          </div>
-        `;
-        catalogoContainer.appendChild(vazio);
+    function renderFavList() {
+      elFavList.innerHTML = "";
+      const itens = Array.from(favoritos)
+        .map((id) => pecas.find((peca) => peca.id === id))
+        .filter(Boolean);
+
+      if (!itens.length) {
+        elFavEmpty.classList.remove("d-none");
       } else {
-        lista.forEach((peca) => catalogoContainer.appendChild(criarCard(peca)));
+        elFavEmpty.classList.add("d-none");
+        itens.forEach((peca) => {
+          const item = document.createElement("div");
+          item.className = "list-group-item list-group-item-action";
+          item.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between w-100 gap-3">
+              <div class="me-auto">
+                <h6 class="mb-1">${peca.nome}</h6>
+                <small>${peca.teatro}</small>
+              </div>
+              <span class="badge bg-primary flex-shrink-0">${peca.classificacao}</span>
+              <button type="button" class="btn btn-link text-danger p-0 ms-2 flex-shrink-0" data-remove="${peca.id}">Remover</button>
+            </div>
+          `;
+          elFavList.appendChild(item);
+        });
       }
-      contadorResultados.textContent = `${lista.length} ${lista.length === 1 ? "apresentação" : "apresentações"}`;
-      sincronizarFavoritos();
+      elFavCount.textContent = favoritos.size;
     }
 
-    function atualizarModal(peca) {
+    function toggleFav(id) {
+      if (!id) return;
+      if (favoritos.has(id)) {
+        favoritos.delete(id);
+      } else {
+        favoritos.add(id);
+      }
+      saveFavs();
+      renderFavList();
+      applyFilters();
+    }
+
+    function openDetails(id) {
+      const peca = pecas.find((item) => item.id === id);
+      if (!peca) return;
       modalTitulo.textContent = peca.nome;
       modalTeatro.textContent = peca.teatro;
       modalClassificacao.textContent = peca.classificacao;
       modalSinopse.textContent = peca.sinopse;
       modalPoster.src = peca.poster;
       modalPoster.alt = `Pôster da peça ${peca.nome}`;
+      detalhesModal.show();
     }
 
-    function salvarFavoritos() {
-      localStorage.setItem(favoritosKey, JSON.stringify(Array.from(favoritos)));
-    }
+    const railEmptyState = () => {
+      rail.innerHTML = `
+        <div class="w-100 text-center text-muted py-5">
+          Nenhuma peça encontrada com os filtros aplicados.
+        </div>
+      `;
+      elResultInfo.textContent = `Exibindo 0 de ${pecas.length}`;
+    };
 
-    function sincronizarFavoritos() {
-      const botoesFav = document.querySelectorAll(".btn-fav");
-      botoesFav.forEach((botao) => {
-        const id = botao.dataset.id;
-        const ativo = favoritos.has(id);
-        botao.setAttribute("aria-pressed", ativo);
-        botao.classList.toggle("btn-primary", ativo);
-        botao.classList.toggle("btn-outline-secondary", !ativo);
-        const icone = ativo ? "&#10084;" : "&#9825;";
-        const label = ativo ? "Favorito" : "Favoritar";
-        botao.innerHTML = `<span class="fav-icon">${icone}</span> ${label}`;
-      });
-      atualizarListaFavoritos();
-    }
-
-    function atualizarListaFavoritos() {
-      listaFavoritos.innerHTML = "";
-      if (favoritos.size === 0) {
-        favoritosVazio.classList.remove("d-none");
-      } else {
-        favoritosVazio.classList.add("d-none");
-        Array.from(favoritos)
-          .map((id) => pecas.find((peca) => peca.id === id))
-          .filter(Boolean)
-          .forEach((peca) => {
-            const item = document.createElement("div");
-            item.className = "list-group-item list-group-item-action";
-            item.innerHTML = `
-              <div class="d-flex align-items-center justify-content-between w-100 gap-3">
-                <div class="me-auto">
-                  <h6 class="mb-1">${peca.nome}</h6>
-                  <small>${peca.teatro}</small>
-                </div>
-                <span class="badge bg-primary flex-shrink-0">${peca.classificacao}</span>
-                <button type="button" class="btn btn-link text-danger p-0 ms-2 flex-shrink-0" data-action="remover-favorito" data-id="${peca.id}">Remover</button>
+    function slideTemplate(p, i, total) {
+      const favPressed = isFav(p.id);
+      return `
+        <div class="slide" role="group" aria-roledescription="slide" aria-label="Peça ${i + 1} de ${total}">
+          <article class="slide-card">
+            <div class="ratio ratio-2x3 slide-poster" style="background-image:url('${p.poster}')"></div>
+            <div class="slide-overlay">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <h3 class="slide-title h5">${p.nome}</h3>
+                <span class="badge badge-age">${p.classificacao}</span>
               </div>
-            `;
-            listaFavoritos.appendChild(item);
-          });
-      }
-      contadorFavoritos.textContent = favoritos.size;
+              <div class="slide-meta mb-2">${p.teatro}</div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-primary" data-details="${p.id}">Detalhes</button>
+                <button class="btn btn-sm ${favPressed ? "btn-warning" : "btn-outline-warning"} btn-fav"
+                        data-fav="${p.id}" aria-pressed="${favPressed}">
+                  ${favPressed ? "★ Favorito" : "☆ Favoritar"}
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+      `;
     }
 
-    catalogoContainer.addEventListener("click", (event) => {
-      const botao = event.target.closest("button");
-      if (!botao) return;
-      const id = botao.dataset.id;
-      const peca = pecas.find((item) => item.id === id);
-      if (!peca) return;
-
-      if (botao.dataset.action === "detalhes") {
-        atualizarModal(peca);
+    function renderCarousel(list) {
+      if (!list.length) {
+        railEmptyState();
+        currentIndex = 0;
+        return;
       }
 
-      if (botao.dataset.action === "favoritar") {
-        if (favoritos.has(id)) {
-          favoritos.delete(id);
-        } else {
-          favoritos.add(id);
+      rail.innerHTML = list.map((p, i) => slideTemplate(p, i, list.length)).join("");
+      elResultInfo.textContent = `Exibindo ${list.length} de ${pecas.length}`;
+      $$("button[data-details]", rail).forEach((btn) => {
+        btn.addEventListener("click", () => openDetails(btn.getAttribute("data-details")));
+      });
+      $$("button[data-fav]", rail).forEach((btn) => {
+        btn.addEventListener("click", () => toggleFav(btn.getAttribute("data-fav")));
+      });
+      currentIndex = 0;
+      snapTo(0);
+    }
+
+    function slideWidth() {
+      const first = rail.querySelector(".slide");
+      return first ? first.getBoundingClientRect().width + 16 /*gap*/ : rail.clientWidth;
+    }
+
+    function snapTo(index) {
+      const slides = $$(".slide", rail);
+      if (!slides.length) return;
+      currentIndex = Math.max(0, Math.min(index, slides.length - 1));
+      const x = slides[currentIndex].offsetLeft - rail.offsetLeft - 8;
+      rail.scrollTo({ left: x, behavior: "smooth" });
+    }
+
+    function scrollBySlide(dir = 1) {
+      const slides = $$(".slide", rail);
+      if (!slides.length) return;
+      snapTo(currentIndex + (dir > 0 ? 1 : -1));
+    }
+
+    $$(".carousel-arrow").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const dir = btn.dataset.dir === "next" ? 1 : -1;
+        scrollBySlide(dir);
+      });
+      btn.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          const dir = btn.dataset.dir === "next" ? 1 : -1;
+          scrollBySlide(dir);
         }
-        salvarFavoritos();
-        sincronizarFavoritos();
-      }
+      });
     });
 
-    listaFavoritos.addEventListener("click", (event) => {
-      const botao = event.target.closest("button[data-action='remover-favorito']");
-      if (!botao) return;
-      const id = botao.dataset.id;
-      favoritos.delete(id);
-      salvarFavoritos();
-      sincronizarFavoritos();
-      aplicarFiltros();
+    let snapTO;
+    rail.addEventListener("scroll", () => {
+      clearTimeout(snapTO);
+      snapTO = setTimeout(() => {
+        const slides = $$(".slide", rail);
+        const center = rail.scrollLeft + rail.clientWidth / 2;
+        let closest = 0;
+        let best = Infinity;
+        slides.forEach((s, i) => {
+          const mid = s.offsetLeft + s.clientWidth / 2;
+          const d = Math.abs(center - mid);
+          if (d < best) {
+            best = d;
+            closest = i;
+          }
+        });
+        currentIndex = closest;
+      }, 80);
     });
 
-    [buscaInput, teatroSelect, classificacaoSelect].forEach((elemento) => {
-      elemento.addEventListener("input", aplicarFiltros);
-      elemento.addEventListener("change", aplicarFiltros);
+    rail.addEventListener("keydown", (ev) => {
+      if (ev.key === "ArrowRight") scrollBySlide(1);
+      if (ev.key === "ArrowLeft") scrollBySlide(-1);
     });
 
-    limparFiltrosBtn.addEventListener("click", () => {
-      buscaInput.value = "";
-      teatroSelect.value = "";
-      classificacaoSelect.value = "";
-      aplicarFiltros();
-      buscaInput.focus();
-    });
+    function applyFilters() {
+      const q = elBusca.value.trim().toLowerCase();
+      const t = elFTeatro.value;
+      const c = elFClass.value;
 
-    atualizarSelects();
-    renderizarCatalogo(pecas);
-    atualizarListaFavoritos();
+      const filtered = pecas.filter((p) => {
+        const textMatch = !q || [p.nome, p.teatro, p.sinopse].some((v) => v.toLowerCase().includes(q));
+        const teatroMatch = !t || p.teatro === t;
+        const classMatch = !c || p.classificacao === c;
+        return textMatch && teatroMatch && classMatch;
+      });
+
+      renderCarousel(filtered);
+    }
+
+    function init() {
+      renderFilters();
+      renderFavList();
+      renderCarousel(pecas);
+
+      [elBusca, elFTeatro, elFClass].forEach((el) => {
+        el.addEventListener("input", applyFilters);
+        el.addEventListener("change", applyFilters);
+      });
+
+      elClear.addEventListener("click", () => {
+        elBusca.value = "";
+        elFTeatro.value = "";
+        elFClass.value = "";
+        renderCarousel(pecas);
+        elResultInfo.textContent = `Exibindo ${pecas.length} de ${pecas.length}`;
+        elBusca.focus();
+      });
+
+      elFavList.addEventListener("click", (ev) => {
+        const btn = ev.target.closest("button[data-remove]");
+        if (!btn) return;
+        toggleFav(btn.getAttribute("data-remove"));
+      });
+    }
+
+    init();
   </script>
 </body>
 </html>
